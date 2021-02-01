@@ -1,0 +1,19 @@
+
+[uuid(E524DE13-C842-4E17-BB56-CED59CE1DE44),
+ helpstring("CDeclFix type library by The trick"),
+ version(1.0)]
+library CDeclFixLib {
+
+	typedef [public] long PTR;
+	typedef [public] long SIZE_T;
+	typedef [public] long HANDLE;
+
+	#include "constants.inc"
+	#include "kernel32.inc"
+	#include "msvbvm60.inc"
+	#include "winnt.inc"
+	#include "user32.inc"
+	#include "ntdll.inc"
+	#include "oleaut32.inc"
+
+}

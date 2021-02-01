@@ -1,0 +1,17 @@
+LIBRARY test
+
+EXPORTS
+
+SumInt
+SumCur
+SumDbl
+SumFlt
+SumShort
+Void
+SumByte
+SumHresult
+CreateStream
+SumStr
+SumVnt
+GetSA
+

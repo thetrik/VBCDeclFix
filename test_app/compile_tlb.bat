@@ -1,0 +1,2 @@
+midl typelib.idl
+pause

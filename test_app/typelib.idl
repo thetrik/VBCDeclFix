@@ -1,0 +1,49 @@
+
+[uuid(E524DE13-C842-4E17-BB56-CED59CE1DE45)]
+library CDeclTest {
+
+	[dllname("test_lib")]
+	module test_lib {
+		
+		[entry("SumInt")]
+		int __cdecl SumInt(int, int);
+
+		[entry("SumShort")]
+		short __cdecl SumShort(short, short);
+
+		[entry("Void")]
+		void __cdecl Void(short, short);
+
+		[entry("SumByte")]
+		unsigned char __cdecl SumByte(unsigned char, unsigned char);
+
+		[entry("SumHresult")]
+		HRESULT __cdecl SumHresult(int, int);
+
+		[entry("SumHresult")]
+		HRESULT SumHresult2(int, int);
+
+		[entry("SumCur")]
+		CURRENCY __cdecl SumCur(CURRENCY, CURRENCY);
+
+		[entry("SumDbl")]
+		double __cdecl SumDbl(double, double);
+
+		[entry("SumFlt")]
+		float __cdecl SumFlt(float, float);
+
+		[entry("SumVnt")]
+		VARIANT __cdecl SumVnt(VARIANT, VARIANT);
+
+		[entry("CreateStream")]
+		IUnknown* __cdecl CreateStream(PVOID a, int b);
+
+		[entry("SumStr")]
+		BSTR __cdecl SumStr(int a, int b);
+
+		[entry("GetSA")]
+		SAFEARRAY(int) __cdecl GetSA(int a, int b);
+
+	}
+
+}
