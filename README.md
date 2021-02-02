@@ -25,4 +25,5 @@ Each entry in the table contains 30 bytes. This table contains 0x19 value at 0x1
 All the information obtained during my own superficial reverse engineering experience therefore, everything described above may not work exactly like that, or even not at all.
 
 Thank you for attention,
+
 The trick.
