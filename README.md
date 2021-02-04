@@ -10,7 +10,7 @@
  
  ![ITypeComp::Bind](/images/type_bind.png)
  
- This method returns [the FUNCDESC](https://docs.microsoft.com/en-us/windows/win32/api/oaidl/ns-oaidl-funcdesc) structure where the callconv member constains the calling convention of the external function. VBA6 then uses this information inside its own structiures which describes the functions in the project. During P-code generation the runtime extracts this information to map the specified function with the corresponding p-codes. There is the table which manages the process of the codegenetraion:
+ This method returns [the FUNCDESC](https://docs.microsoft.com/en-us/windows/win32/api/oaidl/ns-oaidl-funcdesc) structure where the callconv member contains the calling convention of the external function. VBA6 then uses this information inside its own structures which describe the functions in the project. During P-code generation the runtime extracts this information to map the specified function with the corresponding p-codes. There is the table which manages the process of the codegeneration:
  
 ![ITypeComp::Bind](/images/bug_table.png)
 
