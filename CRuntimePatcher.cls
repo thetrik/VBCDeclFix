@@ -43,6 +43,12 @@ Private Enum eImport
     
 End Enum
 
+Private Type tCdeclDeclarePatchData
+    pPatchPos       As PTR      ' // Where patch
+    pPatchTo        As PTR      ' // Destination address
+    lOriginalOffset As Long     ' // Original offset (to restore)
+End Type
+
 Private m_cVba6ModInfo      As CPEModuleInfo
 Private m_pBugTable         As PTR
 Private m_pCodeTables()     As PTR
@@ -51,6 +57,7 @@ Private m_cNewOpcodes       As COpcodeFixer
 Private m_bCDeclEnabled     As Boolean
 Private m_bIsInitialized    As Boolean
 Private m_pOriginHandlers() As PTR
+Private m_tCdeclDeclPatch   As tCdeclDeclarePatchData
 
 Implements IImportProvider
 
@@ -62,7 +69,8 @@ Public Sub Initialize()
     Dim pBugTable       As PTR
     Dim pPCodeTables()  As PTR
     Dim pImports()      As PTR
-
+    Dim tDeclPatch      As tCdeclDeclarePatchData
+    
     On Error GoTo err_handler
     
     If m_bIsInitialized Then
@@ -91,9 +99,16 @@ Public Sub Initialize()
         Err.Raise 5, FULL_PROC_NAME, "Unable to find import"
     End If
     
+    tDeclPatch = ExtractCdeclDeclarePatch(cScanner)
+    
+    If tDeclPatch.pPatchPos = NULL_PTR Then
+        Err.Raise 5, FULL_PROC_NAME, "Unable to find Cdecl declare code"
+    End If
+    
     m_pBugTable = pBugTable
     m_pCodeTables = pPCodeTables
     m_pImports = pImports
+    m_tCdeclDeclPatch = tDeclPatch
     
     m_bIsInitialized = True
     
@@ -139,6 +154,8 @@ Private Sub DisableCdecl()
         ReplaceOpcodeHandler m_cNewOpcodes.OpcodeID(lOpcodeIndex), m_pOriginHandlers(lOpcodeIndex)
     Next
     
+    PatchDeclareCdeclJmp False
+    
     m_bCDeclEnabled = False
     
     Exit Sub
@@ -170,6 +187,8 @@ Private Sub EnableCdecl()
     For lOpcodeIndex = 0 To m_cNewOpcodes.NumberOfOpHandlers - 1
         ReplaceOpcodeHandler m_cNewOpcodes.OpcodeID(lOpcodeIndex), m_cNewOpcodes.Handler(lOpcodeIndex)
     Next
+    
+    PatchDeclareCdeclJmp True
     
     m_bCDeclEnabled = True
     
@@ -290,6 +309,31 @@ err_handler:
     
 End Sub
 
+Private Sub PatchDeclareCdeclJmp( _
+            ByVal bPatch As Boolean)
+    Const PROC_NAME = "PatchDeclareCdeclJmp", FULL_PROC_NAME = MODULE_NAME & "::" & PROC_NAME
+    
+    Dim lOldProtect As Long
+    Dim lOffset     As Long
+    
+    If VirtualProtect(m_tCdeclDeclPatch.pPatchPos, &H4, PAGE_EXECUTE_READWRITE, lOldProtect) = 0 Then
+        Err.Raise 7, PROC_NAME
+    End If
+    
+    Debug.Print Hex$(m_tCdeclDeclPatch.pPatchPos)
+    
+    If bPatch Then
+        lOffset = m_tCdeclDeclPatch.pPatchTo - (m_tCdeclDeclPatch.pPatchPos + 4)
+    Else
+        lOffset = m_tCdeclDeclPatch.lOriginalOffset
+    End If
+    
+    PutMem4 ByVal m_tCdeclDeclPatch.pPatchPos, lOffset
+    
+    VirtualProtect m_tCdeclDeclPatch.pPatchPos, &H4, lOldProtect, lOldProtect
+    
+End Sub
+
 Private Sub PatchBugTable( _
             ByVal bPatch As Boolean)
     Const PROC_NAME = "PatchBugTable", FULL_PROC_NAME = MODULE_NAME & "::" & PROC_NAME
@@ -301,7 +345,7 @@ Private Sub PatchBugTable( _
         Err.Raise 7, PROC_NAME
     End If
     
-    Debug.Print Hex$(m_pBugTable)
+    'Debug.Print Hex$(m_pBugTable)
     
     If bPatch Then
         bNewValue = 9
@@ -314,6 +358,72 @@ Private Sub PatchBugTable( _
     VirtualProtect m_pBugTable, &H1E, lOldProtect, lOldProtect
            
 End Sub
+
+Private Function ExtractCdeclDeclarePatch( _
+                 ByVal cScanner As CSignaturesScanner) As tCdeclDeclarePatchData
+    Const PROC_NAME = "ExtractCdeclDeclarePatch", FULL_PROC_NAME = MODULE_NAME & "::" & PROC_NAME
+    
+    Dim pTest       As PTR
+    Dim pTarget     As PTR
+    Dim pJmpTo      As PTR
+    Dim lOffset     As Long
+    Dim tSecRange   As IMAGE_SECTION_HEADER
+    Dim iMovECXEDI  As Integer
+    
+    On Error GoTo err_handler
+    
+    ' // Check range
+    tSecRange = m_cVba6ModInfo.SectionByName(".text")
+    
+    ' // Set specified sequence
+    cScanner.StartSearch "Declare_Cdecl_Check"
+
+    Do
+        
+        pTest = cScanner.SearchNext()
+        
+        If pTest = NULL_PTR Then
+            Exit Function
+        End If
+        
+        pTarget = cScanner.Target("CompileDeclare")
+        
+        If pTarget >= tSecRange.VirtualAddress + m_cVba6ModInfo.BaseAddress And _
+            pTarget < tSecRange.VirtualAddress + tSecRange.VirtualSize + m_cVba6ModInfo.BaseAddress Then
+            
+            ' // Check original address
+            pJmpTo = cScanner.Target("CdeclCompileErr31")
+            
+            GetMem4 ByVal pJmpTo, lOffset
+            
+            pTest = lOffset + (pJmpTo + 4)
+            
+            ' // Check mov ecx, edi
+            GetMem2 ByVal pTarget, iMovECXEDI
+            
+            ' // Found
+            If iMovECXEDI = &HCF8B And pTest <> pTarget Then
+                
+                ExtractCdeclDeclarePatch.pPatchTo = pTarget
+                ExtractCdeclDeclarePatch.pPatchPos = pJmpTo
+                
+                GetMem4 ByVal ExtractCdeclDeclarePatch.pPatchPos, ExtractCdeclDeclarePatch.lOriginalOffset
+                
+                Exit Function
+                
+            End If
+            
+        End If
+        
+    Loop While True
+
+    Exit Function
+
+err_handler:
+    
+    Err.Raise Err.Number, FULL_PROC_NAME, Err.Source & vbNewLine & Err.Description
+         
+End Function
 
 ' // Extract unxported functions / global variables
 Private Function ExtractImport( _
