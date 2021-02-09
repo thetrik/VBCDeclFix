@@ -30,7 +30,7 @@ Each entry in the table contains 30 bytes. This table contains 0x19 value at 0x1
  
  The first problem is with the "Bug table" which will crash the IDE but we already know how to bypass it. The second problem is related to the unimplemented p-code handlers which generate 0x33 error. 
  
- ## How to enable CDecl keywor for user functions?
+ ## How to enable CDecl keyword for user functions?
  
  The native VB6 code-parser rejects the CDecl keyword after function name so to change this behavior the Add-in patches some internal code which parses the source. There are 2 points where the VB6 parser process procedures. The first point is when it process the source text file. It extracts all the tokens (lexems) from the source line step-by-step and validates their type. If there is some wrong sequence / error it rejects the parsing process and mark the line in red. Regarding to the user procedure declaration we can just hijack the process when it has parsed the procedure name to pass the CDecl keyword. The good thing is Declared procedures and user procedures fall to the same function that makes a PCR-node which describes them. Since we can specify the CDecl keyword for a Declared function and it falls to its PCR-node we also can modify the process to set the same info for a user function.
  
