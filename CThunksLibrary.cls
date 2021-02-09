@@ -6,32 +6,27 @@ BEGIN
   DataSourceBehavior  = 0  'vbNone
   MTSTransactionMode  = 0  'NotAnMTSObject
 END
-Attribute VB_Name = "COpcodeFixer"
+Attribute VB_Name = "CThunksLibrary"
 Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = False
+Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 ' //
-' // COpcodeFixer.cls - opcodes handlers module loader
+' // CThunksLibrary.cls - thunks module loader
 ' // by The trick 2021
 ' //
 
 Option Explicit
 Option Base 0
 
-Private Const MODULE_NAME       As String = "COpcodeFixer"
+Private Const MODULE_NAME       As String = "CThunksLibrary"
 
-Private Const MODULE_SIGNATURE  As Long = &H7866706F
+Private Const MODULE_SIGNATURE  As Long = &H6B636874
 Private Const MODULE_VERSION    As Long = 1
 
 Private Type tModuleHeader
     lModuleSignature    As Long
     lModuleVersion      As Long
-End Type
-
-Private Type tOpcodeHandler
-    lOpcodeID           As Long
-    lHandlerOffset      As Long
 End Type
 
 Private Type tImport
@@ -40,8 +35,13 @@ Private Type tImport
     sName               As String
 End Type
 
+Private Type tExport
+    lOffset             As Long
+    sName               As String
+End Type
+
 Private m_tImports()    As tImport          ' // Import data
-Private m_tOpcodes()    As tOpcodeHandler   ' // New handlers
+Private m_tExports()    As tExport          ' // Export data
 Private m_pModuleCode   As PTR              ' // Code in RWX-memory
 Private m_bPrepared     As Boolean
 
@@ -52,8 +52,8 @@ Public Sub Initialize( _
     
     Dim cStream     As CROStream
     Dim tHeader     As tModuleHeader
-    Dim tOpcodes()  As tOpcodeHandler
     Dim tImports()  As tImport
+    Dim tExports()  As tExport
     Dim lRelocs()   As Long
     Dim lCodeSize   As Long
     Dim pCode       As PTR
@@ -74,13 +74,16 @@ Public Sub Initialize( _
     ElseIf tHeader.lModuleVersion > MODULE_VERSION Then
         Err.Raise 5, , "Unsupported module version"
     End If
-    
-    ' // Read defined opcodes
-    tOpcodes = ExtractOpcodes(cStream)
-    
+
     ' // Read imports
-    cStream.Align 4
     tImports = ExtractImports(cStream)
+    
+    cStream.Align 4
+    
+    ' // Read exports
+    tExports = ExtractExports(cStream)
+    
+    cStream.Align 4
     
     ' // Skip code
     lCodeSize = cStream.ReadLong()
@@ -111,8 +114,8 @@ Public Sub Initialize( _
     CleanAll
     
     m_pModuleCode = pCode
-    m_tOpcodes = tOpcodes
     m_tImports = tImports
+    m_tExports = tExports
     
     Exit Sub
     
@@ -122,35 +125,60 @@ err_handler:
     
 End Sub
 
-Public Property Get NumberOfOpHandlers() As Long
-    NumberOfOpHandlers = SafeArrayElementsCount(ArrPtr(m_tOpcodes))
+Public Property Get NumberOfExports() As Long
+    NumberOfExports = SafeArrayElementsCount(ArrPtr(m_tExports))
 End Property
 
-' // Get opcode by index
-Public Property Get OpcodeID( _
+' // Get exported procedure name
+Public Property Get ExportName( _
                     ByVal lIndex As Long) As Long
-    Const PROC_NAME = "OpcodeID_get", FULL_PROC_NAME = MODULE_NAME & "::" & PROC_NAME
+    Const PROC_NAME = "Export_get", FULL_PROC_NAME = MODULE_NAME & "::" & PROC_NAME
     
-    If lIndex < 0 Or lIndex >= SafeArrayElementsCount(ArrPtr(m_tOpcodes)) Then
+    If lIndex < 0 Or lIndex >= SafeArrayElementsCount(ArrPtr(m_tExports)) Then
         Err.Raise 9, FULL_PROC_NAME
     End If
     
-    OpcodeID = m_tOpcodes(lIndex).lOpcodeID
+    ExportName = m_tExports(lIndex).sName
     
 End Property
 
-' // Get opcode handler by index
-Public Property Get Handler( _
-                    ByVal lIndex As Long) As PTR
-    Const PROC_NAME = "Handler_get", FULL_PROC_NAME = MODULE_NAME & "::" & PROC_NAME
+' // Get thunk by index
+Public Property Get Thunk( _
+                    ByRef vNameIndex As Variant) As PTR
+    Const PROC_NAME = "Thunk_get", FULL_PROC_NAME = MODULE_NAME & "::" & PROC_NAME
+    
+    Dim lIndex  As Long
+    Dim lCount  As Long
+    Dim sName   As String
+    
+    lCount = SafeArrayElementsCount(ArrPtr(m_tExports))
     
     If Not m_bPrepared Then
         Err.Raise 5, FULL_PROC_NAME, "Module isn't prepared"
-    ElseIf lIndex < 0 Or lIndex >= SafeArrayElementsCount(ArrPtr(m_tOpcodes)) Then
+    ElseIf lIndex < 0 Or lIndex >= lCount Then
         Err.Raise 9, FULL_PROC_NAME
     End If
     
-    Handler = m_tOpcodes(lIndex).lHandlerOffset + m_pModuleCode
+    Select Case VarType(vNameIndex)
+    Case vbLong, vbInteger, vbByte
+        lIndex = CLng(vNameIndex)
+    Case Else
+        
+        sName = CStr(vNameIndex)
+        
+        For lIndex = 0 To lCount - 1
+            If StrComp(sName, m_tExports(lIndex).sName, vbBinaryCompare) = 0 Then
+                Exit For
+            End If
+        Next
+    
+        If lIndex = lCount Then
+            Err.Raise 5, FULL_PROC_NAME
+        End If
+    
+    End Select
+    
+    Thunk = m_tExports(lIndex).lOffset + m_pModuleCode
     
 End Property
 
@@ -215,21 +243,21 @@ Private Sub CleanAll()
         VirtualFree m_pModuleCode, 0, MEM_RELEASE
     End If
     
-    Erase m_tOpcodes
+    Erase m_tExports
     Erase m_tImports
     
     m_bPrepared = False
     
 End Sub
 
-' // Extract defined opcodes from stream
-Private Function ExtractOpcodes( _
-                 ByVal cStream As CROStream) As tOpcodeHandler()
-    Const PROC_NAME = "ExtractOpcodes", FULL_PROC_NAME = MODULE_NAME & "::" & PROC_NAME
+' // Extract exports from stream
+Private Function ExtractExports( _
+                 ByVal cStream As CROStream) As tExport()
+    Const PROC_NAME = "ExtractExports", FULL_PROC_NAME = MODULE_NAME & "::" & PROC_NAME
     
     Dim lCount  As Long
     Dim lIndex  As Long
-    Dim tOut()  As tOpcodeHandler
+    Dim tOut()  As tExport
     
     On Error GoTo err_handler
     
@@ -240,24 +268,16 @@ Private Function ExtractOpcodes( _
         ReDim tOut(lCount - 1)
         
         For lIndex = 0 To lCount - 1
-            
-            With tOut(lIndex)
-            
-                .lOpcodeID = cStream.ReadByte()
-                
-                If .lOpcodeID >= &HFB Then
-                    .lOpcodeID = .lOpcodeID * &H100 Or cStream.ReadByte()
-                End If
-                
-                .lHandlerOffset = cStream.ReadLong()
-                
-            End With
-            
+            tOut(lIndex).lOffset = cStream.ReadLong()
+        Next
+        
+        For lIndex = 0 To lCount - 1
+            tOut(lIndex).sName = cStream.ReadMBZStringToUTF16()
         Next
         
     End If
     
-    ExtractOpcodes = tOut
+    ExtractExports = tOut
     
     Exit Function
     
@@ -343,3 +363,5 @@ End Function
 Private Sub Class_Terminate()
     CleanAll
 End Sub
+
+

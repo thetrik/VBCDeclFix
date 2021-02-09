@@ -1,4 +1,9 @@
 Attribute VB_Name = "modMain"
+' //
+' // Using Cdecl functions from tlb and declare
+' // by The trick 2021
+' //
+
 Option Explicit
 
 Private Declare Function snwprintf1 CDecl Lib "msvcrt" _
@@ -23,6 +28,7 @@ Sub Main()
     Dim z()     As Long
     Dim sBuf    As String
     
+    ' // Check tlb-calls
     Debug.Print SumByte(1, 2)
     Debug.Print SumShort(3, 4)
     Debug.Print SumInt(5, 6)
@@ -36,6 +42,7 @@ Sub Main()
    
     z = GetSA(4, 5)
     
+    ' // Check declare calls
     sBuf = Space$(255)
     
     Debug.Print Left$(sBuf, snwprintf1(StrPtr(sBuf), Len(sBuf), StrPtr("Test %ld"), ByVal 123&))

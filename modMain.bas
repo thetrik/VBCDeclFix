@@ -1,6 +1,20 @@
 Attribute VB_Name = "modMain"
+' //
+' // modMain.bas - global functions for VBCdeclFix project
+' // by The trick 2021
+' //
+
 Option Explicit
 
+Public Enum eResourcesIDs
+    
+    RID_OPCODES_HANDLERS = 101
+    RID_SIGNATURES = 102
+    RID_THUNKS = 103
+    
+End Enum
+
+Private Const MODULE_NAME   As String = "modMain"
 
 ' //
 ' // Get number of elements in array by pointer

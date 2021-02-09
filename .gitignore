@@ -44,3 +44,5 @@
 *.pdb
 *.cache
 *.dca
+/test_app/cairo/cairo.dll
+/test_app/sqlite/sqlite3.dll

@@ -45,7 +45,7 @@ Begin VB.Form frmAbout
       Left            =   60
       TabIndex        =   0
       Top             =   120
-      Width           =   3255
+      Width           =   3315
    End
 End
 Attribute VB_Name = "frmAbout"

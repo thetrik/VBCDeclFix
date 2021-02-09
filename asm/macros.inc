@@ -1,6 +1,6 @@
 
 ;
-; Macros for P-code handlers
+; Macros for P-code handlers / patch procedures
 ; by The tick 2021
 ;
 
@@ -26,7 +26,7 @@ macro GOTO_NEXT_OPCODE {
     xor eax, eax
     mov al, BYTE [esi]
     inc esi
-    mov_rel4 ecx, [_g_DispTable]
+    mov_rel4 ecx, _g_DispTable
     jmp DWORD [eax * 4 + ecx]
 }
 
@@ -87,7 +87,19 @@ macro jmp_rel proc* {
 macro mov_rel4 reg*, ptr* {
     local lbl
 
-    mov reg, ptr
+    mov reg, [ptr]
+
+    lbl:
+
+    RELOCATIONS equ RELOCATIONS, lbl - 4
+    RELOCATIONS_COUNT = RELOCATIONS_COUNT + 1
+
+}
+
+macro push_rel4 ptr* {
+    local lbl
+
+    push [ptr]
 
     lbl:
 
@@ -98,7 +110,7 @@ macro mov_rel4 reg*, ptr* {
 
 macro CALL_FUNCTION_TRACE {
 
-    mov_rel4 ecx, [_g_pEventMonitorsEnabled]
+    mov_rel4 ecx, _g_pEventMonitorsEnabled
 
     .if BYTE [ecx]
 
@@ -139,10 +151,33 @@ if MSVBVM60 eq TRUE
     mov edx, [ebp - 0x44]
     test WORD [edx + 0x76], 2
 else
-    mov_rel4 ecx, [_g_ExceptFlags]
+    mov_rel4 ecx, _g_ExceptFlags
     test WORD [ecx], 2
 end if
     jnz HrCheck
+
+}
+
+; Create export
+macro CREATE_EXPORT [pSym] {
+    _counter = 0
+
+    common
+
+	dd _number_of_exports
+
+    forward
+
+	dd pSym
+	_counter = _counter + 1
+
+    forward
+
+	db `pSym , 0
+
+    common
+
+	_number_of_exports = _counter
 
 }
 

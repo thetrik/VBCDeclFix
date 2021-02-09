@@ -1,2 +1,3 @@
 101 RCDATA "..\\asm\\pcode_handlers.bin"
 102 RCDATA "..\\asm\\signatures.bin"
+103 RCDATA "..\\asm\\thunks.bin"

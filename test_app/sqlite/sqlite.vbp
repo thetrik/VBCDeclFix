@@ -1,11 +1,10 @@
 Type=Exe
-Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#..\..\..\..\..\..\Windows\SysWOW64\stdole2.tlb#OLE Automation
-Reference=*\G{E524DE13-C842-4E17-BB56-CED59CE1DE45}#0.0#0#typelib.tlb#CDeclTest
+Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#..\..\..\..\..\..\..\Windows\SysWOW64\stdole2.tlb#OLE Automation
 Module=modMain; modMain.bas
 Startup="Sub Main"
-ExeName32="TestCdeclFix.exe"
+ExeName32="sqlite.exe"
 Command32=""
-Name="TestCdeclFix"
+Name="sqlite"
 HelpContextID="0"
 CompatibleMode="0"
 MajorVer=1
