@@ -146,6 +146,8 @@ Public Sub Initialize( _
             
         End Select
         
+        cStream.Align 4 ' // Alignment required
+        
     Loop
     
     If lResCount Then

@@ -28,7 +28,6 @@
 #*.lib
 
 # Executables
-*.exe
 *.out
 *.app
 
@@ -46,3 +45,6 @@
 *.dca
 /test_app/cairo/cairo.dll
 /test_app/sqlite/sqlite3.dll
+*.intermediate.manifest
+*.exp
+*.lib

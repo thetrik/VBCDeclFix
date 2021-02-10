@@ -47,10 +47,6 @@ Private Sub AddinInstance_OnConnection( _
     On Error GoTo error_handler
 
     Set m_cVBInstance = Application
-    Set m_cPatcher = New CRuntimePatcher
-    
-    m_cPatcher.Initialize
-    m_cPatcher.CDeclEnabled = True
     
     Set m_cMenuCmd = AddToAddInCommandBar("CDeclFix")
     
@@ -59,6 +55,11 @@ Private Sub AddinInstance_OnConnection( _
         Set m_cMnuHandler = m_cVBInstance.Events.CommandBarEvents(m_cMenuCmd)
         
     End If
+    
+    Set m_cPatcher = New CRuntimePatcher
+
+    m_cPatcher.Initialize
+    m_cPatcher.CDeclEnabled = True
     
     Exit Sub
     
